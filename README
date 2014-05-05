@@ -1,0 +1,67 @@
+ Lua SPHINX client driver for ngx_lua based on the cosocket API
+ 
+ USE:
+ with openresty
+ 
+ location /sphinxtest {
+        default_type "text/plain";
+        content_by_lua '
+
+
+        local sphinx = require "resty.sphinxapi"
+        
+        query="qq"
+        local client, err = sphinx.new()
+        client:sphinx_set_server("192.168.40.29",9312)
+        client:sphinx_set_match_mode( 6 )
+        client:sphinx_set_field_weights( 2, {"title","content"}, {500,1} )
+        res=client:sphinx_query(query,"*","")
+        
+        ngx.say(string.format("Query %s retrieved %d of %d matches.",query, res.total, res.total_found))
+        ngx.say ( "Query stats:" )
+        for  i=1,res.num_words do
+	    ngx.say ( string.format("\t %s found %d times in %d documents",
+	    res.words[i].word, res.words[i].hits, res.words[i].docs) )
+        end
+
+        ngx.say ( "Matches:" )
+	
+        for i=1, res.num_matches do
+            ngx.say("")
+	    ngx.say ( string.format("%d. doc_id=%d, weight=%d", i,res.matches[i].doc,res.matches[i].weight) )
+	    ngx.say ( "attrs:" );
+	    for j=1,res.num_attrs do
+                ngx.say(res.attr_names[j],"=",res.matches[i].attr[j].value)
+	    end
+		
+        end
+
+        ';
+      }
+	 
+	 
+RESULT:
+http://192.168.131.132/sphinxtest?key=Opera
+
+Query Opera retrieved 1 of 1 matches.
+Query stats:
+	 opera found 2 times in 1 documents
+Matches:
+
+1. doc_id=3, weight=499966
+attrs:
+group_id=3
+date_added=1270094460
+
+
+http://192.168.131.132/sphinxtest?key=%E6%8B%AD%E7%9B%AE%E4%BB%A5%E5%BE%85
+
+Query 拭目以待 retrieved 1 of 1 matches.
+Query stats:
+	 拭目以待 found 1 times in 1 documents
+Matches:
+
+1. doc_id=1, weight=499053
+attrs:
+group_id=2
+date_added=1270131607
