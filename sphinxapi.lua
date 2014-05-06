@@ -69,6 +69,12 @@ local	SPH_ATTR_MULTI			= 0x40000001
 local	SPH_ATTR_MULTI64		= 0x40000002
 
 
+local	SPH_FILTER_VALUES		= 0
+local	SPH_FILTER_RANGE		= 1
+local	SPH_FILTER_FLOATRANGE	= 2
+
+
+
 
 local sphinx ={ver_search =0x119}
 local sx = { __index = sphinx }
@@ -151,6 +157,13 @@ function send_int(value,str)
    return str
 end
 
+function send_float(value,str)
+   str = str .. string.char(band(rshift(value,24),255)) .. string.char(band(rshift(value,16),255)) .. string.char(band(rshift(value,8),255)) .. string.char(band(value,255))
+   return str
+end
+
+
+
 function send_word(value,str)
    str = str  .. string.char(band(rshift(value,8),255)) .. string.char(band(value,255))
    return str
@@ -198,36 +211,40 @@ end
 
 function sphinx.new(self)
     local client = _sphinx_client
+	client.sock, err = ngx.socket.tcp()
+	
+	if not client.sock then
+        return nil, "not initialized"
+    end
+		
 	return setmetatable({ client = client },sx)
 end
 
-function sphinx.sphinx_set_server(self,host,port)
+function sphinx.set_server(self,host,port)
     self.client.host = host
 	self.client.port = port
-        self.client.sock, err = ngx.socket.tcp()
-        ok, err = self.client.sock:connect(host, port)
-        if not ok then
-            ngx.say("connect faile!")
-        end 
+        
+    ok, err = self.client.sock:connect(host, port)
+    return ok,err
 end
 
-function sphinx.sphinx_set_match_mode(self,mode)
+function sphinx.set_match_mode(self,mode)
     self.client.mode = mode
 end
 
-function sphinx.sphinx_set_sort_mode(self,mode,sortby)
+function sphinx.set_sort_mode(self,mode,sortby)
 	self.client.mode = mode
 	self.client.sortby = sortby
 end
 
-function sphinx.sphinx_set_field_weights(self,num_weights,field_names,field_weights)
+function sphinx.set_field_weights(self,num_weights,field_names,field_weights)
 
 	self.client.num_field_weights = num_weights
 	self.client.field_weights_names = field_names
 	self.client.field_weights_values = field_weights
 end
 
-function sphinx.sphinx_add_query(self,query,index_list, comment)
+function sphinx.add_query(self,query,index_list, comment)
     req=""
     req=send_int(self.client.offset,req)
     req=send_int(self.client.limit,req)
@@ -246,7 +263,39 @@ function sphinx.sphinx_add_query(self,query,index_list, comment)
 	req=send_qword (self.client.minid,req )
 	req=send_qword(self.client.maxid,req )
 	req=send_int(self.client.num_filters,req )
-	--pass 
+	for i=1, self.client.num_filters do
+		req=send_str ( self.client.filters[i].attr,req )
+		req=send_int ( self.client.filters[i].filter_type,req )
+		
+		if self.client.filters[i].filter_type == SPH_FILTER_VALUES then
+		
+		    req=send_int ( self.client.filters[i].num_values,req )
+			if self.client.ver_search>=0x114 then
+				for j=1, self.client.filters[i].num_values do
+					req=send_qword (self.client.filters[i].values[j],req)
+				end
+			else
+				for j=1, self.client.filters[i].num_values do
+					req=send_int ( self.client.filters[i].values[j],req )
+				end
+			end
+			
+		elseif  self.client.filters[i].filter_type == SPH_FILTER_RANGE then
+			if  self.client.ver_search>=0x114 then
+				req=send_qword ( self.client.filters[i].umin ,req )
+				req=send_qword ( self.client.filters[i].umax,req )
+			else
+				req=send_int ( self.client.filters[i].umin,req )
+				req=send_int ( self.client.filters[i].umax ,req )
+			end
+			
+		elseif  self.client.filters[i].filter_type == SPH_FILTER_FLOATRANGE then
+				req=send_float (  self.client.filters[i].fmin ,req)
+				req=send_float (  self.client.filters[i].fmax ,req)
+		end
+		
+		req=send_int ( self.client.filters[i].exclude ,req)
+	end 
 	
 	req=send_int ( self.client.group_func,req )
 	req=send_str ( self.client.group_by,req )
@@ -257,11 +306,21 @@ function sphinx.sphinx_add_query(self,query,index_list, comment)
 	req=send_int ( self.client.retry_delay,req )
 	req=send_str ( self.client.group_distinct,req )
 	
-	--pass
-	req=send_int ( 0,req )
+	if  self.client.geoanchor_attr_lat or self.client.geoanchor_attr_long then
+		req=send_int ( 1,req )
+		req=send_str ( self.client.geoanchor_attr_lat,req  )
+		req=send_str ( self.client.geoanchor_attr_long,req )
+		req=send_float ( self.client.geoanchor_lat,req )
+		req=send_float ( self.client.geoanchor_long,req )
+	else
+		req=send_int ( 0 ,req)
+	end
 	
 	req=send_int ( self.client.num_index_weights,req )
-	--pass
+	for i=1, self.client.num_index_weights do
+		req=send_str ( self.client.index_weights_names[i],req )
+		req=send_int ( self.client.index_weights_values[i],req )
+	end
 	
 	req=send_int ( self.client.max_query_time,req )
 	req=send_int ( self.client.num_field_weights,req )
@@ -274,12 +333,19 @@ function sphinx.sphinx_add_query(self,query,index_list, comment)
 	
 	if self.client.ver_search>=0x115  then
 	    req=send_int ( self.client.num_overrides,req )
-		--pass
+		for i=1, self.client.num_overrides do
+			req=send_str ( self.client.overrides[i].attr,req )
+			req=send_int ( SPH_ATTR_INTEGER ,req)
+			req=send_int ( self.client.overrides[i].num_values ,req)
+			for  j=1, self.client.overrides[i].num_values do
+				req=send_qword ( self.client.overrides[i].docids[j],req )
+				req=send_int ( self.client.overrides[i].uint_values[j],req )
+			end
+		end
 	end
 	
 	if self.client.ver_search>=0x116  then
 	    req=send_str ( self.client.select_list,req )
-		--pass
 	end
 	
 	_sphinx_client.num_reqs = 1
@@ -288,7 +354,7 @@ function sphinx.sphinx_add_query(self,query,index_list, comment)
 
 end
 
-function sphinx.sphinx_query(self,query,index_list, comment)
+function sphinx.query(self,query,index_list, comment)
 
     input=""
     input=send_int(1,"")
@@ -298,7 +364,7 @@ function sphinx.sphinx_query(self,query,index_list, comment)
     response, receive_status = self.client.sock:receive(4)
 
 
-    req = self.sphinx_add_query(self,query,index_list, comment);
+    req = self.add_query(self,query,index_list, comment);
 	
 	
     local len = 8 + #req
