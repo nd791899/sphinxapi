@@ -1,3 +1,5 @@
+-- Copyright (C) 2014 nd791899 191076013@qq.com
+
 local bit = require "bit"
 local band = bit.band
 local lshift = bit.lshift
