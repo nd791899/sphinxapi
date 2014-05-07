@@ -63,86 +63,86 @@ RESULT:
 http://192.168.131.132/sphinxtest?key=Opera
 
 {
-words: [
-{
-word: "opera",
-hits: 2,
-docs: 1
-}
-],
-matches: [
-{
-attr: [
-{
-value: 3
-},
-{
-value: 1270094460
-}
-],
-weight: 499966,
-doc: 3
-}
-],
-status: 0,
-attr_names: [
-"group_id",
-"date_added"
-],
-num_matches: 1,
-attr_types: [
-1,
-2
-],
-num_words: 1,
-fields: { },
-num_attrs: 2,
-time_msec: 2,
-total_found: 1,
-num_fields: 2,
-total: 1
+    words: [
+    {
+        word: "opera",
+        hits: 2,
+        docs: 1
+    }
+    ],
+    matches: [
+    {
+        attr: [
+        {
+            value: 3
+        },
+    {
+        value: 1270094460
+    }
+    ],
+    weight: 499966,
+    doc: 3
+    }
+    ],
+    status: 0,
+    attr_names: [
+        "group_id",
+        "date_added"
+    ],
+    num_matches: 1,
+    attr_types: [
+        1,
+        2
+    ],
+    num_words: 1,
+    fields: { },
+    num_attrs: 2,
+    time_msec: 2,
+    total_found: 1,
+    num_fields: 2,
+    total: 1
 }
 
 
 http://192.168.131.132/sphinxtest?key=%E6%8B%AD%E7%9B%AE%E4%BB%A5%E5%BE%85
 
 {
-words: [
-{
-word: "拭目以待",
-hits: 1,
-docs: 1
-}
-],
-matches: [
-{
-attr: [
-{
-value: 2
-},
-{
-value: 1270131607
-}
-],
-weight: 499053,
-doc: 1
-}
-],
-status: 0,
-attr_names: [
-"group_id",
-"date_added"
-],
-num_matches: 1,
-attr_types: [
-1,
-2
-],
-num_words: 1,
-fields: { },
-num_attrs: 2,
-time_msec: 4,
-total_found: 1,
-num_fields: 2,
-total: 1
+    words: [
+    {
+        word: "拭目以待",
+        hits: 1,
+        docs: 1
+    }
+    ],
+    matches: [
+    {
+        attr: [
+        {
+            value: 2
+        },
+        {
+            value: 1270131607
+        }
+    ],
+    weight: 499053,
+    doc: 1
+    }
+    ],
+    status: 0,
+    attr_names: [
+        "group_id",
+        "date_added"
+    ],
+    num_matches: 1,
+    attr_types: [
+        1,
+        2
+    ],
+    num_words: 1,
+    fields: { },
+    num_attrs: 2,
+    time_msec: 4,
+    total_found: 1,
+    num_fields: 2,
+    total: 1
 }
